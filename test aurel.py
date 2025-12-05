@@ -6,9 +6,9 @@ import math
 # --- FONCTIONS UTILITAIRES POUR LA SAISIE ROBUSTE ---
 
 def lire_oui_non(message):
+    """Demande une réponse y/n et boucle tant que la réponse n'est pas valide."""
     while True:
         reponse = input(message).strip().lower()
-
         if reponse == 'y':
             return True
         elif reponse == 'n':
@@ -18,6 +18,7 @@ def lire_oui_non(message):
 
 
 def lire_int(message, min_val=None, max_val=None):
+    """Demande un entier et vérifie qu'il est dans les bornes."""
     while True:
         try:
             valeur = int(input(message))
@@ -42,10 +43,10 @@ def lire_float(message, positive_only=False):
                 continue
             return valeur
         except ValueError:
-            print("  [Erreur] Veuillez entrer un nombre décimal valide (ex: 1000 ou 1e4).")
+            print("  [Erreur] Veuillez entrer un nombre décimal valide.")
 
 
-# --- 1. PRÉ-TRAITEMENT (SAISIE UTILISATEUR ROBUSTE) ---
+# --- 1. PRÉ-TRAITEMENT (SAISIE UTILISATEUR) ---
 
 def get_user_input():
     print("=== DÉBUT DE LA SAISIE DES DONNÉES ===")
@@ -63,51 +64,59 @@ def get_user_input():
         y = lire_float(f"  Coordonnée Y : ")
         Coord[i] = [x, y]
 
-    # 3. Connectivité, Module et Section
+    # 3. Connectivité, Module et Section (MODIFIÉ)
     print(f"\n--- Saisie des Barres (Matrice {Nr}x2) et Propriétés ---")
     Connec = np.zeros((Nr, 2), dtype=int)
     Module = np.zeros(Nr)
     Section = np.zeros(Nr)
 
+    # On demande si c'est identique pour tout le monde
+    props_identiques = lire_oui_non("Les propriétés (E, S) sont-elles identiques pour toutes les barres ? (y/n) : ")
+
+    # Si oui, on demande les valeurs une seule fois maintenant
+    if props_identiques:
+        print("  > Saisie des propriétés globales :")
+        E_global = lire_float(f"    Module de Young E (Pa) : ", positive_only=True)
+        S_global = lire_float(f"    Section S (m^2) : ", positive_only=True)
+        # On remplit tout le tableau d'un coup
+        Module.fill(E_global)
+        Section.fill(S_global)
+
     for i in range(Nr):
         print(f"Barre {i + 1} :")
-        # On vérifie que les noeuds existent (entre 1 et Nn)
+        # On demande toujours la connectivité
         n1 = lire_int(f"  Numéro du noeud de départ (1 à {Nn}) : ", min_val=1, max_val=Nn) - 1
         n2 = lire_int(f"  Numéro du noeud d'arrivée (1 à {Nn}) : ", min_val=1, max_val=Nn) - 1
 
-        # Vérification basique : une barre ne peut pas commencer et finir au même noeud
         while n1 == n2:
             print("  [Erreur] Le noeud de départ et d'arrivée doivent être différents.")
             n2 = lire_int(f"  Numéro du noeud d'arrivée (1 à {Nn}) : ", min_val=1, max_val=Nn) - 1
 
-        E = lire_float(f"  Module de Young E (Pa) : ", positive_only=True)
-        S = lire_float(f"  Section S (m^2) : ", positive_only=True)
-
         Connec[i] = [n1, n2]
-        Module[i] = E
-        Section[i] = S
 
-    # 4. Conditions Limites (CL) - PARTIE MODIFIÉE SELON TA DEMANDE
+        # Si NON identique, on demande E et S à chaque tour
+        if not props_identiques:
+            E = lire_float(f"  Module de Young E (Pa) : ", positive_only=True)
+            S = lire_float(f"  Section S (m^2) : ", positive_only=True)
+            Module[i] = E
+            Section[i] = S
+
+    # 4. Conditions Limites (CL)
     print("\n--- Conditions Limites (Appuis) ---")
     BC_Ux = np.zeros(Nn, dtype=int)
     BC_Uy = np.zeros(Nn, dtype=int)
 
-    # On demande combien de noeuds sont bloqués (entre 1 et Nn)
     nb_appuis = lire_int("Combien de noeuds ont des appuis (bloqués) ? ", min_val=1, max_val=Nn)
 
     for _ in range(nb_appuis):
         node_idx = lire_int(f"  Numéro du noeud bloqué (1 à {Nn}) : ", min_val=1, max_val=Nn) - 1
-
         print(f"  Pour le noeud {node_idx + 1} :")
-
-        # Utilisation de la fonction robuste lire_oui_non
         bloque_x = lire_oui_non("    Bloqué en X ? (y/n) : ")
         bloque_y = lire_oui_non("    Bloqué en Y ? (y/n) : ")
 
         if bloque_x: BC_Ux[node_idx] = 1
         if bloque_y: BC_Uy[node_idx] = 1
 
-    # Valeurs imposées (0 par défaut)
     VAL_Ux = np.zeros(Nn)
     VAL_Uy = np.zeros(Nn)
 
@@ -116,15 +125,12 @@ def get_user_input():
     VAL_Fx = np.zeros(Nn)
     VAL_Fy = np.zeros(Nn)
 
-    # Nombre de forces (entre 1 et Nn)
     nb_forces = lire_int("Combien de noeuds subissent une force ? ", min_val=1, max_val=Nn)
 
     for _ in range(nb_forces):
         node_idx = lire_int(f"  Numéro du noeud chargé (1 à {Nn}) : ", min_val=1, max_val=Nn) - 1
         fx = lire_float(f"    Force en X (N) : ")
         fy = lire_float(f"    Force en Y (N) : ")
-
-        # On ajoute les forces (au cas où l'utilisateur rentre 2 fois le même noeud)
         VAL_Fx[node_idx] += fx
         VAL_Fy[node_idx] += fy
 
@@ -132,7 +138,6 @@ def get_user_input():
 
 
 # --- 2. RÉSOLUTION (SOLVER) ---
-# (Ce bloc reste identique mathématiquement, il utilise les matrices créées plus haut)
 
 def solve_truss(Coord, Connec, Module, Section, BC_Ux, BC_Uy, VAL_Ux, VAL_Uy, VAL_Fx, VAL_Fy):
     Nn = len(Coord)
@@ -173,7 +178,6 @@ def solve_truss(Coord, Connec, Module, Section, BC_Ux, BC_Uy, VAL_Ux, VAL_Uy, VA
             for col in range(4):
                 K_global[indices[row], indices[col]] += Ke[row, col]
 
-    # Réduction
     free_dofs = []
     for i in range(Nn):
         if BC_Ux[i] == 0: free_dofs.append(2 * i)
@@ -185,8 +189,7 @@ def solve_truss(Coord, Connec, Module, Section, BC_Ux, BC_Uy, VAL_Ux, VAL_Uy, VA
     try:
         U_red = np.linalg.solve(K_red, F_red)
     except np.linalg.LinAlgError:
-        print(
-            "\n[ERREUR] La matrice est singulière ! Vérifiez vos conditions limites (le système est peut-être instable).")
+        print("\n[ERREUR] La matrice est singulière ! Vérifiez vos conditions limites.")
         return None, None
 
     U_final = np.zeros(DoF)
@@ -209,15 +212,11 @@ def post_process(U_final, K_global, Coord, Connec, Module, Section):
     print("       RÉSULTATS FINAUX       ")
     print("=" * 30)
 
-    # --- AJOUT : AFFICHAGE DE LA MATRICE DE RIGIDITÉ ---
     print("\n--- 0. Matrice de Rigidité Globale (K) ---")
-    # Configuration pour un affichage propre : 1 chiffre après la virgule, pas de notation scientifique si possible
     np.set_printoptions(precision=1, linewidth=200, suppress=True)
     print(K_global)
-    # On remet les options par défaut pour la suite
     np.set_printoptions(edgeitems=3, infstr='inf', linewidth=75, nanstr='nan', precision=8, suppress=False,
                         threshold=1000, formatter=None)
-    # ---------------------------------------------------
 
     print("\n--- 1. Déplacements Nodaux (m) ---")
     print(f"{'Noeud':<6} {'Ux (m)':<15} {'Uy (m)':<15}")
@@ -227,7 +226,6 @@ def post_process(U_final, K_global, Coord, Connec, Module, Section):
     print("\n--- 2. Forces de Réaction (N) ---")
     print(f"{'Noeud':<6} {'Rx (N)':<15} {'Ry (N)':<15}")
     for i in range(Nn):
-        # On affiche les valeurs significatives (proches de 0 sont masquées pour clarté)
         rx = F_calc[2 * i] if abs(F_calc[2 * i]) > 1e-5 else 0.0
         ry = F_calc[2 * i + 1] if abs(F_calc[2 * i + 1]) > 1e-5 else 0.0
         print(f"{i + 1:<6} {rx:.2f}          {ry:.2f}")
@@ -287,16 +285,12 @@ def post_process(U_final, K_global, Coord, Connec, Module, Section):
     plt.grid(True)
     plt.show()
 
+
 # --- MAIN ---
 if __name__ == "__main__":
-    # 1. Saisie
     data = get_user_input()
 
     if data is not None:
         Coord, Connec, Module, Section, BC_Ux, BC_Uy, VAL_Ux, VAL_Uy, VAL_Fx, VAL_Fy = data
-
-        # 2. Résolution
         U_final, K_global = solve_truss(Coord, Connec, Module, Section, BC_Ux, BC_Uy, VAL_Ux, VAL_Uy, VAL_Fx, VAL_Fy)
-
-        # 3. Affichage
         post_process(U_final, K_global, Coord, Connec, Module, Section)

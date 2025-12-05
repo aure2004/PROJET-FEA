@@ -4,9 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e23c5f09-1bbb-4d37-b238-ff784654166d" name="Changes" comment="TEST 1">
-      <change afterPath="$PROJECT_DIR$/test aurel.py" afterDir="false" />
+    <list default="true" id="e23c5f09-1bbb-4d37-b238-ff784654166d" name="Changes" comment="rendu v1">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test aurel.py" beforeDir="false" afterPath="$PROJECT_DIR$/test aurel.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -99,7 +99,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1764955457627</updated>
-      <workItem from="1764955459333" duration="3831000" />
+      <workItem from="1764955459333" duration="5820000" />
     </task>
     <task id="LOCAL-00001" summary="test">
       <option name="closed" value="true" />
@@ -125,7 +125,15 @@
       <option name="project" value="LOCAL" />
       <updated>1764956259651</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="rendu v1">
+      <option name="closed" value="true" />
+      <created>1764959451607</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1764959451608</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -134,7 +142,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="test" />
     <MESSAGE value="TEST 1" />
-    <option name="LAST_COMMIT_MESSAGE" value="TEST 1" />
+    <MESSAGE value="rendu v1" />
+    <option name="LAST_COMMIT_MESSAGE" value="rendu v1" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
