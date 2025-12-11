@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e23c5f09-1bbb-4d37-b238-ff784654166d" name="Changes" comment="rendu v1">
+    <list default="true" id="e23c5f09-1bbb-4d37-b238-ff784654166d" name="Changes" comment="vf test aurel">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test aurel.py" beforeDir="false" afterPath="$PROJECT_DIR$/test aurel.py" afterDir="false" />
     </list>
@@ -133,7 +133,15 @@
       <option name="project" value="LOCAL" />
       <updated>1764959451608</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="vf test aurel">
+      <option name="closed" value="true" />
+      <created>1765467931083</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1765467931083</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -143,7 +151,8 @@
     <MESSAGE value="test" />
     <MESSAGE value="TEST 1" />
     <MESSAGE value="rendu v1" />
-    <option name="LAST_COMMIT_MESSAGE" value="rendu v1" />
+    <MESSAGE value="vf test aurel" />
+    <option name="LAST_COMMIT_MESSAGE" value="vf test aurel" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

@@ -2,9 +2,6 @@ import numpy as np
 import math
 
 
-#Fonction
-
-
 def nettoyer_entree(texte):
     if texte is None: return ""
     return texte.strip()
@@ -60,8 +57,6 @@ def clean_zeros(matrice, tolerance=1e-9):
     return matrice_propre
 
 
-#Donnée
-
 def definition_repere_utilisateur():
     print("\n=== CONFIGURATION DU REPÈRE ===")
     print("Orientation de l'axe X dans votre schéma ?")
@@ -81,8 +76,6 @@ def definition_repere_utilisateur():
 
     theta = math.radians(angle)
     c, s = math.cos(theta), math.sin(theta)
-    if abs(c) < 1e-10: c = 0.0
-    if abs(s) < 1e-10: s = 0.0
     R_frame = np.array([[c, -s], [s, c]])
     return R_frame, angle
 
@@ -130,56 +123,30 @@ def get_user_input():
         n2 = lire_int(f"  Arrivée (1-{Nn}) : ", 1, Nn) - 1
         Connec[i] = [n1, n2]
 
-    #BC
     print("\nAppuis et Conditions Limites")
     BC_Type = np.zeros((Nn, 2), dtype=int)
-    BC_Incline = {}
     noeuds_traites = set()
 
-    #Appuis Inclinés
-    if lire_oui_non("Y a-t-il des appuis INCLINÉS ? (y/n) : "):
-        print("Saisie des appuis inclinés (Tapez '0' comme numéro pour arrêter) :")
+    if lire_oui_non("Y a-t-il des nœuds bloqués ? (y/n) : "):
+        print("Saisie des appuis (Tapez '0' comme numéro pour arrêter) :")
         count = 1
         while True:
             if len(noeuds_traites) == Nn:
-                print("  [Info] Tous les nœuds ont déjà une condition définie.")
+                print("  [Info] Tous les nœuds sont configurés.")
                 break
-            entree = lire_int(f"  Appui Incliné {count} - Numéro du noeud (0 pour finir) : ", 0, Nn)
+            entree = lire_int(f"  Appui {count} - Numéro du noeud (0 pour finir) : ", 0, Nn)
             if entree == 0: break
-
             idx = entree - 1
             if idx in noeuds_traites:
-                print(f"  [ERREUR] Le noeud {entree} a DÉJÀ été configuré. Impossible de le re-saisir.")
+                print(f"  [ERREUR] Le noeud {entree} est déjà configuré.")
                 continue
 
-            angle = lire_float("    Angle inclinaison (deg) : ")
-            BC_Incline[idx] = angle
+            print(f"    Pour le noeud {entree} :")
+            if lire_oui_non("      Bloqué X ? (y/n) : "): BC_Type[idx, 0] = 1
+            if lire_oui_non("      Bloqué Y ? (y/n) : "): BC_Type[idx, 1] = 1
             noeuds_traites.add(idx)
             count += 1
 
-    #Appuis Standards
-    nb_restants = Nn - len(noeuds_traites)
-    if nb_restants > 0:
-        if lire_oui_non("Y a-t-il d'autres nœuds bloqués (Standards) ? (y/n) : "):
-            print("Saisie des appuis standards (Tapez '0' comme numéro pour arrêter) :")
-            count = 1
-            while True:
-                if len(noeuds_traites) == Nn:
-                    print("  [Info] Tous les nœuds ont déjà une condition définie.")
-                    break
-                entree = lire_int(f"  Appui Std {count} - Numéro du noeud (0 pour finir) : ", 0, Nn)
-                if entree == 0: break
-                idx = entree - 1
-                if idx in noeuds_traites:
-                    print(f"  [ERREUR] Le noeud {entree} a DÉJÀ été configuré. Impossible de le re-saisir.")
-                    continue
-                print(f"    Pour le noeud {entree} :")
-                if lire_oui_non("      Bloqué X ? (y/n) : "): BC_Type[idx, 0] = 1
-                if lire_oui_non("      Bloqué Y ? (y/n) : "): BC_Type[idx, 1] = 1
-                noeuds_traites.add(idx)
-                count += 1
-
-    #Force
     print("\nForces")
     Fx_Py = np.zeros(Nn)
     Fy_Py = np.zeros(Nn)
@@ -200,12 +167,10 @@ def get_user_input():
             Fx_Py[n] += f_py[0]
             Fy_Py[n] += f_py[1]
 
-    return Coord_Py, Connec, Module, Section, BC_Type, BC_Incline, Fx_Py, Fy_Py, R_frame
+    return Coord_Py, Connec, Module, Section, BC_Type, Fx_Py, Fy_Py, R_frame
 
-
-#Solveur + Affichage
-
-def solve_and_display(Coord, Connec, Module, Section, BC_Type, BC_Incline, Fx, Fy, R_frame):
+def solve_and_display(Coord, Connec, Module, Section, BC_Type, Fx, Fy, R_frame):
+    # 1. INITIALISATION
     Nn = len(Coord)
     DDL = 2 * Nn
     K_global = np.zeros((DDL, DDL))
@@ -215,7 +180,7 @@ def solve_and_display(Coord, Connec, Module, Section, BC_Type, BC_Incline, Fx, F
         F_global[2 * i] = Fx[i]
         F_global[2 * i + 1] = Fy[i]
 
-    # Assemblage
+    # 2. ASSEMBLAGE
     for i in range(len(Connec)):
         n1, n2 = Connec[i]
         x1, y1 = Coord[n1]
@@ -237,81 +202,51 @@ def solve_and_display(Coord, Connec, Module, Section, BC_Type, BC_Incline, Fx, F
             for col in range(4):
                 K_global[idx[r], idx[col]] += Ke[r, col]
 
-    # APPUIS INCLINÉS
-    rho = np.eye(DDL)
-    for i, angle_inc in BC_Incline.items():
-        rad_user = math.radians(angle_inc)
-        dir_u = np.array([math.cos(rad_user), math.sin(rad_user)])
-        dir_py = to_python_vec(dir_u, R_frame)
-        angle_final = math.atan2(dir_py[1], dir_py[0])
-        c_i, s_i = math.cos(angle_final), math.sin(angle_final)
-
-        rho[2 * i:2 * i + 2, 2 * i:2 * i + 2] = np.array([[c_i, -s_i], [s_i, c_i]])
-
-    K_rot = rho.T @ K_global @ rho
-    F_rot = rho.T @ F_global
-
-    #RÉDUCTION
+    # 3. RÉDUCTION
     dofs_to_remove = []
-    for i in BC_Incline: dofs_to_remove.append(2 * i + 1)
     for i in range(Nn):
-        if i not in BC_Incline:
-            if BC_Type[i, 0] == 1: dofs_to_remove.append(2 * i)
-            if BC_Type[i, 1] == 1: dofs_to_remove.append(2 * i + 1)
+        if BC_Type[i, 0] == 1: dofs_to_remove.append(2 * i)  # Bloqué X (BC_Ux=1)
+        if BC_Type[i, 1] == 1: dofs_to_remove.append(2 * i + 1)  # Bloqué Y (BC_Uy=1)
 
     dofs_to_remove = sorted(list(set(dofs_to_remove)))
     free_dofs = np.setdiff1d(np.arange(DDL), dofs_to_remove)
 
-    K_red = K_rot[np.ix_(free_dofs, free_dofs)]
-    F_red = F_rot[free_dofs]
+    K_red = K_global[np.ix_(free_dofs, free_dofs)]
+    F_red = F_global[free_dofs]
 
-    #RÉSOLUTION
+    # 4. RÉSOLUTION
     try:
         U_red = np.linalg.solve(K_red, F_red)
     except np.linalg.LinAlgError:
-        print("\n[ERREUR CRITIQUE] Matrice avec det=0. Structure instable.")
+        print("\n[ERREUR CRITIQUE] Matrice singulière (det=0). Structure instable.")
         return
 
-    U_rot_full = np.zeros(DDL)
-    U_rot_full[free_dofs] = U_red
-    U_global = rho @ U_rot_full
-    Reactions = K_global @ U_global - F_global
+    # 5. RECONSTRUCTION
+    U_global = np.zeros(DDL)
+    U_global[free_dofs] = U_red
 
-    # --- AFFICHAGE ---
-    print("\n" + "=" * 60)
+    # 6. AFFICHAGE
+    print("\n" + "=" * 30)
     print("           RÉSULTATS       ")
-    print("=" * 60)
+    print("=" * 30)
 
+    # Affichage Matrice (Projetée pour lisibilité)
     T_disp = np.zeros((DDL, DDL))
     for i in range(Nn):
         T_disp[2 * i:2 * i + 2, 2 * i:2 * i + 2] = R_frame
     K_user_view = T_disp.T @ K_global @ T_disp
 
     np.set_printoptions(linewidth=300, precision=3, suppress=True)
-    print("Matrice de Rigidité (termes > 1e-9) :")
+    print("Matrice de Rigidité Globale :")
     print(clean_zeros(K_user_view))
 
-    print("\nDéplacements & Réactions")
-    print(f"{'Nd':<3} | {'Ux (m)':<12} {'Uy (m)':<12} | {'Rx (N)':<12} {'Ry (N)':<12}")
-    print("-" * 65)
+    print("\nDéplacements aux Nœuds :")
+    print(f"{'Nd':<3} | {'Ux (m)':<12} {'Uy (m)':<12}")
+    print("-" * 35)
 
     for i in range(Nn):
         u_u = to_user_vec(U_global[2 * i:2 * i + 2], R_frame)
-        r_u = to_user_vec(Reactions[2 * i:2 * i + 2], R_frame)
-        print(f"{i + 1:<3} | {u_u[0]:12.4e} {u_u[1]:12.4e} | {r_u[0]:12.1f} {r_u[1]:12.1f}")
-
-    print("\nEfforts dans les barres (Axial)")
-    print(f"{'Barre':<6} {'Effort (N)':<12} {'État'}")
-    for i in range(len(Connec)):
-        n1, n2 = Connec[i]
-        x1, y1 = Coord[n1]
-        x2, y2 = Coord[n2]
-        L = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-        c, s = (x2 - x1) / L, (y2 - y1) / L
-        u_elem = np.concatenate([U_global[2 * n1:2 * n1 + 2], U_global[2 * n2:2 * n2 + 2]])
-        N_force = (Module[i] * Section[i] / L) * np.dot([-c, -s, c, s], u_elem)
-        etat = "Traction" if N_force > 1e-9 else ("Compress." if N_force < -1e-9 else "Nul")
-        print(f"{i + 1:<6} {N_force:<12.2f} {etat}")
+        print(f"{i + 1:<3} | {u_u[0]:12.4e} {u_u[1]:12.4e}")
 
 
 if __name__ == "__main__":
