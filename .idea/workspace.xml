@@ -4,10 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e23c5f09-1bbb-4d37-b238-ff784654166d" name="Changes" comment="test v2">
-      <change afterPath="$PROJECT_DIR$/matrice.py" afterDir="false" />
+    <list default="true" id="e23c5f09-1bbb-4d37-b238-ff784654166d" name="Changes" comment="rendu v1">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test aurel changement de repere.py" beforeDir="false" afterPath="$PROJECT_DIR$/test aurel changement de repere.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test aurel.py" beforeDir="false" afterPath="$PROJECT_DIR$/test aurel.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -33,7 +32,7 @@
   <component name="GithubPullRequestsUISettings">{
   &quot;selectedUrlAndAccountId&quot;: {
     &quot;url&quot;: &quot;https://github.com/aure2004/PROJET-FEA.git&quot;,
-    &quot;accountId&quot;: &quot;fe79f693-8ecf-42be-9be9-e469f4204a2f&quot;
+    &quot;accountId&quot;: &quot;27b12416-aeb0-4a55-967f-197df0586b7f&quot;
   }
 }</component>
   <component name="ProjectColorInfo">{
@@ -44,25 +43,22 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.main.executor": "Run",
-    "Python.test aurel changement de repere.executor": "Run",
-    "Python.test aurel.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "main",
-    "ignore.virus.scanning.warn.message": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test aurel.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="main" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="Mini Projet FEA" />
@@ -104,8 +100,6 @@
       <option name="presentableId" value="Default" />
       <updated>1764955457627</updated>
       <workItem from="1764955459333" duration="5820000" />
-      <workItem from="1764969912412" duration="3423000" />
-      <workItem from="1765025325981" duration="7760000" />
     </task>
     <task id="LOCAL-00001" summary="test">
       <option name="closed" value="true" />
@@ -139,15 +133,7 @@
       <option name="project" value="LOCAL" />
       <updated>1764959451608</updated>
     </task>
-    <task id="LOCAL-00005" summary="test v2">
-      <option name="closed" value="true" />
-      <created>1764978029857</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1764978029857</updated>
-    </task>
-    <option name="localTasksCounter" value="6" />
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -157,8 +143,7 @@
     <MESSAGE value="test" />
     <MESSAGE value="TEST 1" />
     <MESSAGE value="rendu v1" />
-    <MESSAGE value="test v2" />
-    <option name="LAST_COMMIT_MESSAGE" value="test v2" />
+    <option name="LAST_COMMIT_MESSAGE" value="rendu v1" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -174,6 +159,5 @@
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/Mini_Projet_FEA$test_aurel.coverage" NAME="test aurel Coverage Results" MODIFIED="1764958406674" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Mini_Projet_FEA$main.coverage" NAME="main Coverage Results" MODIFIED="1764958397989" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/PROJET_FEA$test_aurel_changement_de_repere.coverage" NAME="test aurel changement de repere Coverage Results" MODIFIED="1765039118075" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

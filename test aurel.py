@@ -1,296 +1,322 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import math
 
 
-# --- FONCTIONS UTILITAIRES POUR LA SAISIE ROBUSTE ---
+#Fonction
+
+
+def nettoyer_entree(texte):
+    if texte is None: return ""
+    return texte.strip()
+
+
+def lire_choix_menu(message, options_valides):
+    while True:
+        raw_input = input(message)
+        choix = nettoyer_entree(raw_input)
+        if choix in options_valides: return choix
+        print(f"  [Erreur] Choix invalide ({', '.join(options_valides)}).")
+
 
 def lire_oui_non(message):
-    """Demande une réponse y/n et boucle tant que la réponse n'est pas valide."""
     while True:
-        reponse = input(message).strip().lower()
-        if reponse == 'y':
-            return True
-        elif reponse == 'n':
-            return False
-        else:
-            print("  [Erreur] Veuillez répondre uniquement par 'y' (yes) ou 'n' (no).")
+        reponse = nettoyer_entree(input(message)).lower()
+        if reponse in ['y', 'o', 'yes', 'oui']: return True
+        if reponse in ['n', 'no', 'non']: return False
+        print("  [Erreur] Répondre par 'y' (oui) ou 'n' (non).")
 
 
 def lire_int(message, min_val=None, max_val=None):
-    """Demande un entier et vérifie qu'il est dans les bornes."""
     while True:
         try:
-            valeur = int(input(message))
+            valeur = int(nettoyer_entree(input(message)))
             if min_val is not None and valeur < min_val:
-                print(f"  [Erreur] La valeur doit être supérieure ou égale à {min_val}.")
+                print(f"  [Erreur] Valeur >= {min_val} requise.")
                 continue
             if max_val is not None and valeur > max_val:
-                print(f"  [Erreur] La valeur doit être inférieure ou égale à {max_val}.")
+                print(f"  [Erreur] Valeur <= {max_val} requise.")
                 continue
             return valeur
         except ValueError:
-            print("  [Erreur] Veuillez entrer un nombre entier valide.")
+            print("  [Erreur] Entier invalide.")
 
 
 def lire_float(message, positive_only=False):
-    """Demande un nombre décimal."""
     while True:
         try:
-            valeur = float(input(message))
+            cleaned = nettoyer_entree(input(message)).replace(',', '.')
+            valeur = float(cleaned)
             if positive_only and valeur <= 0:
-                print("  [Erreur] La valeur doit être strictement positive.")
+                print("  [Erreur] Valeur positive requise.")
                 continue
             return valeur
         except ValueError:
-            print("  [Erreur] Veuillez entrer un nombre décimal valide.")
+            print("  [Erreur] Nombre invalide.")
 
 
-# --- 1. PRÉ-TRAITEMENT (SAISIE UTILISATEUR) ---
+def clean_zeros(matrice, tolerance=1e-9):
+    matrice_propre = np.copy(matrice)
+    matrice_propre[np.abs(matrice_propre) < tolerance] = 0.0
+    return matrice_propre
+
+
+#Donnée
+
+def definition_repere_utilisateur():
+    print("\n=== CONFIGURATION DU REPÈRE ===")
+    print("Orientation de l'axe X dans votre schéma ?")
+    print("  1. Droite (Standard 0°)")
+    print("  2. Bas    (-90°)")
+    print("  3. Haut   (+90°)")
+    print("  4. Gauche (180°)")
+    choix = lire_choix_menu("  Votre choix (1-4) : ", ['1', '2', '3', '4'])
+
+    angle = 0.0
+    if choix == '2':
+        angle = -90.0
+    elif choix == '3':
+        angle = 90.0
+    elif choix == '4':
+        angle = 180.0
+
+    theta = math.radians(angle)
+    c, s = math.cos(theta), math.sin(theta)
+    if abs(c) < 1e-10: c = 0.0
+    if abs(s) < 1e-10: s = 0.0
+    R_frame = np.array([[c, -s], [s, c]])
+    return R_frame, angle
+
+
+def to_python_vec(vec_user, R_frame): return R_frame @ vec_user
+
+
+def to_user_vec(vec_python, R_frame): return R_frame.T @ vec_python
+
 
 def get_user_input():
-    print("=== DÉBUT DE LA SAISIE DES DONNÉES ===")
+    R_frame, angle_repere_deg = definition_repere_utilisateur()
 
-    # 1. Nombre de noeuds et de barres
-    Nn = lire_int("Entrez le nombre de nœuds (Nn) : ", min_val=2)
-    Nr = lire_int("Entrez le nombre de barres (Nr) : ", min_val=1)
+    print("\nSAISIE GÉOMÉTRIE")
+    Nn = lire_int("Nombre de nœuds : ", min_val=2)
+    Nr = lire_int("Nombre de barres : ", min_val=1)
 
-    # 2. Coordonnées (Matrice Nn x 2)
-    print(f"\n--- Saisie des Coordonnées (Matrice {Nn}x2) ---")
-    Coord = np.zeros((Nn, 2))
+    print("\nCoordonnées (VOTRE repère)")
+    Coord_Py = np.zeros((Nn, 2))
     for i in range(Nn):
         print(f"Noeud {i + 1} :")
-        x = lire_float(f"  Coordonnée X : ")
-        y = lire_float(f"  Coordonnée Y : ")
-        Coord[i] = [x, y]
+        xu = lire_float("  X : ")
+        yu = lire_float("  Y : ")
+        Coord_Py[i] = to_python_vec(np.array([xu, yu]), R_frame)
 
-    # 3. Connectivité, Module et Section (MODIFIÉ)
-    print(f"\n--- Saisie des Barres (Matrice {Nr}x2) et Propriétés ---")
+    print("\nBarres")
     Connec = np.zeros((Nr, 2), dtype=int)
     Module = np.zeros(Nr)
     Section = np.zeros(Nr)
 
-    # On demande si c'est identique pour tout le monde
-    props_identiques = lire_oui_non("Les propriétés (E, S) sont-elles identiques pour toutes les barres ? (y/n) : ")
-
-    # Si oui, on demande les valeurs une seule fois maintenant
-    if props_identiques:
-        print("  > Saisie des propriétés globales :")
-        E_global = lire_float(f"    Module de Young E (Pa) : ", positive_only=True)
-        S_global = lire_float(f"    Section S (m^2) : ", positive_only=True)
-        # On remplit tout le tableau d'un coup
-        Module.fill(E_global)
-        Section.fill(S_global)
+    if lire_oui_non("Propriétés (E, S) identiques ? (y/n) : "):
+        E_g = lire_float("  E (Pa) : ", True)
+        S_g = lire_float("  S (m^2) : ", True)
+        Module.fill(E_g)
+        Section.fill(S_g)
+    else:
+        for i in range(Nr):
+            print(f"Barre {i + 1} :")
+            Module[i] = lire_float(f"  E : ", True)
+            Section[i] = lire_float(f"  S : ", True)
 
     for i in range(Nr):
-        print(f"Barre {i + 1} :")
-        # On demande toujours la connectivité
-        n1 = lire_int(f"  Numéro du noeud de départ (1 à {Nn}) : ", min_val=1, max_val=Nn) - 1
-        n2 = lire_int(f"  Numéro du noeud d'arrivée (1 à {Nn}) : ", min_val=1, max_val=Nn) - 1
-
-        while n1 == n2:
-            print("  [Erreur] Le noeud de départ et d'arrivée doivent être différents.")
-            n2 = lire_int(f"  Numéro du noeud d'arrivée (1 à {Nn}) : ", min_val=1, max_val=Nn) - 1
-
+        print(f"Barre {i + 1} Connectivité :")
+        n1 = lire_int(f"  Départ (1-{Nn}) : ", 1, Nn) - 1
+        n2 = lire_int(f"  Arrivée (1-{Nn}) : ", 1, Nn) - 1
         Connec[i] = [n1, n2]
 
-        # Si NON identique, on demande E et S à chaque tour
-        if not props_identiques:
-            E = lire_float(f"  Module de Young E (Pa) : ", positive_only=True)
-            S = lire_float(f"  Section S (m^2) : ", positive_only=True)
-            Module[i] = E
-            Section[i] = S
+    #BC
+    print("\nAppuis et Conditions Limites")
+    BC_Type = np.zeros((Nn, 2), dtype=int)
+    BC_Incline = {}
+    noeuds_traites = set()
 
-    # 4. Conditions Limites (CL)
-    print("\n--- Conditions Limites (Appuis) ---")
-    BC_Ux = np.zeros(Nn, dtype=int)
-    BC_Uy = np.zeros(Nn, dtype=int)
+    #Appuis Inclinés
+    if lire_oui_non("Y a-t-il des appuis INCLINÉS ? (y/n) : "):
+        print("Saisie des appuis inclinés (Tapez '0' comme numéro pour arrêter) :")
+        count = 1
+        while True:
+            if len(noeuds_traites) == Nn:
+                print("  [Info] Tous les nœuds ont déjà une condition définie.")
+                break
+            entree = lire_int(f"  Appui Incliné {count} - Numéro du noeud (0 pour finir) : ", 0, Nn)
+            if entree == 0: break
 
-    nb_appuis = lire_int("Combien de noeuds ont des appuis (bloqués) ? ", min_val=1, max_val=Nn)
+            idx = entree - 1
+            if idx in noeuds_traites:
+                print(f"  [ERREUR] Le noeud {entree} a DÉJÀ été configuré. Impossible de le re-saisir.")
+                continue
 
-    for _ in range(nb_appuis):
-        node_idx = lire_int(f"  Numéro du noeud bloqué (1 à {Nn}) : ", min_val=1, max_val=Nn) - 1
-        print(f"  Pour le noeud {node_idx + 1} :")
-        bloque_x = lire_oui_non("    Bloqué en X ? (y/n) : ")
-        bloque_y = lire_oui_non("    Bloqué en Y ? (y/n) : ")
+            angle = lire_float("    Angle inclinaison (deg) : ")
+            BC_Incline[idx] = angle
+            noeuds_traites.add(idx)
+            count += 1
 
-        if bloque_x: BC_Ux[node_idx] = 1
-        if bloque_y: BC_Uy[node_idx] = 1
+    #Appuis Standards
+    nb_restants = Nn - len(noeuds_traites)
+    if nb_restants > 0:
+        if lire_oui_non("Y a-t-il d'autres nœuds bloqués (Standards) ? (y/n) : "):
+            print("Saisie des appuis standards (Tapez '0' comme numéro pour arrêter) :")
+            count = 1
+            while True:
+                if len(noeuds_traites) == Nn:
+                    print("  [Info] Tous les nœuds ont déjà une condition définie.")
+                    break
+                entree = lire_int(f"  Appui Std {count} - Numéro du noeud (0 pour finir) : ", 0, Nn)
+                if entree == 0: break
+                idx = entree - 1
+                if idx in noeuds_traites:
+                    print(f"  [ERREUR] Le noeud {entree} a DÉJÀ été configuré. Impossible de le re-saisir.")
+                    continue
+                print(f"    Pour le noeud {entree} :")
+                if lire_oui_non("      Bloqué X ? (y/n) : "): BC_Type[idx, 0] = 1
+                if lire_oui_non("      Bloqué Y ? (y/n) : "): BC_Type[idx, 1] = 1
+                noeuds_traites.add(idx)
+                count += 1
 
-    VAL_Ux = np.zeros(Nn)
-    VAL_Uy = np.zeros(Nn)
+    #Force
+    print("\nForces")
+    Fx_Py = np.zeros(Nn)
+    Fy_Py = np.zeros(Nn)
+    if lire_oui_non("Saisir des forces ? (y/n) : "):
+        nb_f = lire_int("Nombre de nœuds chargés : ", 0, Nn)
+        for i in range(nb_f):
+            print(f"  Charge n°{i + 1} :")
+            n = lire_int("    Numéro du noeud : ", 1, Nn) - 1
 
-    # 5. Forces Nodales
-    print("\n--- Chargement (Forces) ---")
-    VAL_Fx = np.zeros(Nn)
-    VAL_Fy = np.zeros(Nn)
+            norme = lire_float("    Norme de la force (N) : ")
+            angle_f = lire_float("    Angle par rapport à votre axe X (deg) : ")
 
-    nb_forces = lire_int("Combien de noeuds subissent une force ? ", min_val=1, max_val=Nn)
+            rad = math.radians(angle_f)
+            fx_user = norme * math.cos(rad)
+            fy_user = norme * math.sin(rad)
 
-    for _ in range(nb_forces):
-        node_idx = lire_int(f"  Numéro du noeud chargé (1 à {Nn}) : ", min_val=1, max_val=Nn) - 1
-        fx = lire_float(f"    Force en X (N) : ")
-        fy = lire_float(f"    Force en Y (N) : ")
-        VAL_Fx[node_idx] += fx
-        VAL_Fy[node_idx] += fy
+            f_py = to_python_vec(np.array([fx_user, fy_user]), R_frame)
+            Fx_Py[n] += f_py[0]
+            Fy_Py[n] += f_py[1]
 
-    return Coord, Connec, Module, Section, BC_Ux, BC_Uy, VAL_Ux, VAL_Uy, VAL_Fx, VAL_Fy
+    return Coord_Py, Connec, Module, Section, BC_Type, BC_Incline, Fx_Py, Fy_Py, R_frame
 
 
-# --- 2. RÉSOLUTION (SOLVER) ---
+#Solveur + Affichage
 
-def solve_truss(Coord, Connec, Module, Section, BC_Ux, BC_Uy, VAL_Ux, VAL_Uy, VAL_Fx, VAL_Fy):
+def solve_and_display(Coord, Connec, Module, Section, BC_Type, BC_Incline, Fx, Fy, R_frame):
     Nn = len(Coord)
-    Nr = len(Connec)
-    DoF = 2 * Nn
-
-    K_global = np.zeros((DoF, DoF))
-    F_global = np.zeros(DoF)
+    DDL = 2 * Nn
+    K_global = np.zeros((DDL, DDL))
+    F_global = np.zeros(DDL)
 
     for i in range(Nn):
-        F_global[2 * i] = VAL_Fx[i]
-        F_global[2 * i + 1] = VAL_Fy[i]
+        F_global[2 * i] = Fx[i]
+        F_global[2 * i + 1] = Fy[i]
 
-    print("\n[INFO] Assemblage de la matrice de rigidité...")
-    for i in range(Nr):
-        n1 = Connec[i, 0]
-        n2 = Connec[i, 1]
-
+    # Assemblage
+    for i in range(len(Connec)):
+        n1, n2 = Connec[i]
         x1, y1 = Coord[n1]
         x2, y2 = Coord[n2]
+        L = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+        if L < 1e-12: continue
 
-        L_e = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-        c = (x2 - x1) / L_e
-        s = (y2 - y1) / L_e
+        c = (x2 - x1) / L
+        s = (y2 - y1) / L
+        k_val = Module[i] * Section[i] / L
 
-        k_val = (Module[i] * Section[i]) / L_e
+        Ke = k_val * np.array([[c * c, c * s, -c * c, -c * s],
+                               [c * s, s * s, -c * s, -s * s],
+                               [-c * c, -c * s, c * c, c * s],
+                               [-c * s, -s * s, c * s, s * s]])
 
-        Ke = k_val * np.array([
-            [c ** 2, c * s, -c ** 2, -c * s],
-            [c * s, s ** 2, -c * s, -s ** 2],
-            [-c ** 2, -c * s, c ** 2, c * s],
-            [-c * s, -s ** 2, c * s, s ** 2]
-        ])
-
-        indices = [2 * n1, 2 * n1 + 1, 2 * n2, 2 * n2 + 1]
-
-        for row in range(4):
+        idx = [2 * n1, 2 * n1 + 1, 2 * n2, 2 * n2 + 1]
+        for r in range(4):
             for col in range(4):
-                K_global[indices[row], indices[col]] += Ke[row, col]
+                K_global[idx[r], idx[col]] += Ke[r, col]
 
-    free_dofs = []
+    # APPUIS INCLINÉS
+    rho = np.eye(DDL)
+    for i, angle_inc in BC_Incline.items():
+        rad_user = math.radians(angle_inc)
+        dir_u = np.array([math.cos(rad_user), math.sin(rad_user)])
+        dir_py = to_python_vec(dir_u, R_frame)
+        angle_final = math.atan2(dir_py[1], dir_py[0])
+        c_i, s_i = math.cos(angle_final), math.sin(angle_final)
+
+        rho[2 * i:2 * i + 2, 2 * i:2 * i + 2] = np.array([[c_i, -s_i], [s_i, c_i]])
+
+    K_rot = rho.T @ K_global @ rho
+    F_rot = rho.T @ F_global
+
+    #RÉDUCTION
+    dofs_to_remove = []
+    for i in BC_Incline: dofs_to_remove.append(2 * i + 1)
     for i in range(Nn):
-        if BC_Ux[i] == 0: free_dofs.append(2 * i)
-        if BC_Uy[i] == 0: free_dofs.append(2 * i + 1)
+        if i not in BC_Incline:
+            if BC_Type[i, 0] == 1: dofs_to_remove.append(2 * i)
+            if BC_Type[i, 1] == 1: dofs_to_remove.append(2 * i + 1)
 
-    K_red = K_global[np.ix_(free_dofs, free_dofs)]
-    F_red = F_global[free_dofs]
+    dofs_to_remove = sorted(list(set(dofs_to_remove)))
+    free_dofs = np.setdiff1d(np.arange(DDL), dofs_to_remove)
 
+    K_red = K_rot[np.ix_(free_dofs, free_dofs)]
+    F_red = F_rot[free_dofs]
+
+    #RÉSOLUTION
     try:
         U_red = np.linalg.solve(K_red, F_red)
     except np.linalg.LinAlgError:
-        print("\n[ERREUR] La matrice est singulière ! Vérifiez vos conditions limites.")
-        return None, None
+        print("\n[ERREUR CRITIQUE] Matrice avec det=0. Structure instable.")
+        return
 
-    U_final = np.zeros(DoF)
-    U_final[free_dofs] = U_red
+    U_rot_full = np.zeros(DDL)
+    U_rot_full[free_dofs] = U_red
+    U_global = rho @ U_rot_full
+    Reactions = K_global @ U_global - F_global
 
-    return U_final, K_global
+    # --- AFFICHAGE ---
+    print("\n" + "=" * 60)
+    print("           RÉSULTATS       ")
+    print("=" * 60)
 
-
-# --- 3. POST-TRAITEMENT (RÉSULTATS) ---
-
-def post_process(U_final, K_global, Coord, Connec, Module, Section):
-    if U_final is None: return
-
-    Nn = len(Coord)
-    Nr = len(Connec)
-
-    F_calc = K_global @ U_final
-
-    print("\n" + "=" * 30)
-    print("       RÉSULTATS FINAUX       ")
-    print("=" * 30)
-
-    print("\n--- 0. Matrice de Rigidité Globale (K) ---")
-    np.set_printoptions(precision=1, linewidth=200, suppress=True)
-    print(K_global)
-    np.set_printoptions(edgeitems=3, infstr='inf', linewidth=75, nanstr='nan', precision=8, suppress=False,
-                        threshold=1000, formatter=None)
-
-    print("\n--- 1. Déplacements Nodaux (m) ---")
-    print(f"{'Noeud':<6} {'Ux (m)':<15} {'Uy (m)':<15}")
+    T_disp = np.zeros((DDL, DDL))
     for i in range(Nn):
-        print(f"{i + 1:<6} {U_final[2 * i]:.4e}     {U_final[2 * i + 1]:.4e}")
+        T_disp[2 * i:2 * i + 2, 2 * i:2 * i + 2] = R_frame
+    K_user_view = T_disp.T @ K_global @ T_disp
 
-    print("\n--- 2. Forces de Réaction (N) ---")
-    print(f"{'Noeud':<6} {'Rx (N)':<15} {'Ry (N)':<15}")
+    np.set_printoptions(linewidth=300, precision=3, suppress=True)
+    print("Matrice de Rigidité (termes > 1e-9) :")
+    print(clean_zeros(K_user_view))
+
+    print("\nDéplacements & Réactions")
+    print(f"{'Nd':<3} | {'Ux (m)':<12} {'Uy (m)':<12} | {'Rx (N)':<12} {'Ry (N)':<12}")
+    print("-" * 65)
+
     for i in range(Nn):
-        rx = F_calc[2 * i] if abs(F_calc[2 * i]) > 1e-5 else 0.0
-        ry = F_calc[2 * i + 1] if abs(F_calc[2 * i + 1]) > 1e-5 else 0.0
-        print(f"{i + 1:<6} {rx:.2f}          {ry:.2f}")
+        u_u = to_user_vec(U_global[2 * i:2 * i + 2], R_frame)
+        r_u = to_user_vec(Reactions[2 * i:2 * i + 2], R_frame)
+        print(f"{i + 1:<3} | {u_u[0]:12.4e} {u_u[1]:12.4e} | {r_u[0]:12.1f} {r_u[1]:12.1f}")
 
-    print("\n--- 3. Efforts Normaux dans les barres (N) ---")
-    print(f"{'Barre':<6} {'Noeuds':<10} {'Effort (N)':<15} {'État'}")
-    for i in range(Nr):
+    print("\nEfforts dans les barres (Axial)")
+    print(f"{'Barre':<6} {'Effort (N)':<12} {'État'}")
+    for i in range(len(Connec)):
         n1, n2 = Connec[i]
         x1, y1 = Coord[n1]
         x2, y2 = Coord[n2]
-        L_e = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-        c = (x2 - x1) / L_e
-        s = (y2 - y1) / L_e
-
-        u_elem = np.array([U_final[2 * n1], U_final[2 * n1 + 1], U_final[2 * n2], U_final[2 * n2 + 1]])
-        B_stress = (Module[i] * Section[i] / L_e) * np.array([-c, -s, c, s])
-
-        Normal_Force = np.dot(B_stress, u_elem)
-        state = "Traction" if Normal_Force > 0 else "Compression"
-        print(f"{i + 1:<6} {n1 + 1}-{n2 + 1:<7} {Normal_Force:.2f}          {state}")
-
-    # Visualisation
-    scale_factor = 1.0
-    max_disp = np.max(np.abs(U_final))
-    if max_disp > 0:
-        L_mean = np.mean(
-            [math.sqrt((Coord[c[1]][0] - Coord[c[0]][0]) ** 2 + (Coord[c[1]][1] - Coord[c[0]][1]) ** 2) for c in
-             Connec])
-        scale_factor = 0.15 * L_mean / max_disp
-
-    print(f"\n[INFO] Facteur d'échelle graphique : x{scale_factor:.1f}")
-
-    plt.figure(figsize=(8, 6))
-    for i in range(Nr):
-        n1, n2 = Connec[i]
-        plt.plot([Coord[n1, 0], Coord[n2, 0]], [Coord[n1, 1], Coord[n2, 1]], 'b--o', alpha=0.5,
-                 label='Initial' if i == 0 else "")
-        if i == 0:
-            for j in range(Nn):
-                plt.text(Coord[j, 0], Coord[j, 1], f" {j + 1}", color='blue', fontsize=12)
-
-    New_Coord = np.zeros_like(Coord)
-    for i in range(Nn):
-        New_Coord[i, 0] = Coord[i, 0] + U_final[2 * i] * scale_factor
-        New_Coord[i, 1] = Coord[i, 1] + U_final[2 * i + 1] * scale_factor
-
-    for i in range(Nr):
-        n1, n2 = Connec[i]
-        plt.plot([New_Coord[n1, 0], New_Coord[n2, 0]], [New_Coord[n1, 1], New_Coord[n2, 1]], 'r-x', linewidth=2,
-                 label='Déformée' if i == 0 else "")
-
-    plt.title(f"Structure (Échelle x{scale_factor:.1f})")
-    plt.xlabel("X (m)")
-    plt.ylabel("Y (m)")
-    plt.legend()
-    plt.axis('equal')
-    plt.grid(True)
-    plt.show()
+        L = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+        c, s = (x2 - x1) / L, (y2 - y1) / L
+        u_elem = np.concatenate([U_global[2 * n1:2 * n1 + 2], U_global[2 * n2:2 * n2 + 2]])
+        N_force = (Module[i] * Section[i] / L) * np.dot([-c, -s, c, s], u_elem)
+        etat = "Traction" if N_force > 1e-9 else ("Compress." if N_force < -1e-9 else "Nul")
+        print(f"{i + 1:<6} {N_force:<12.2f} {etat}")
 
 
-# --- MAIN ---
 if __name__ == "__main__":
-    data = get_user_input()
-
-    if data is not None:
-        Coord, Connec, Module, Section, BC_Ux, BC_Uy, VAL_Ux, VAL_Uy, VAL_Fx, VAL_Fy = data
-        U_final, K_global = solve_truss(Coord, Connec, Module, Section, BC_Ux, BC_Uy, VAL_Ux, VAL_Uy, VAL_Fx, VAL_Fy)
-        post_process(U_final, K_global, Coord, Connec, Module, Section)
+    try:
+        data = get_user_input()
+        solve_and_display(*data)
+    except KeyboardInterrupt:
+        pass
